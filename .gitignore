@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+
+datasets/raw/
+models/checkpoints/
+models/trained/
+
+.env
+
+.ipynb_checkpoints/
+
+node_modules/
+
+*.log
