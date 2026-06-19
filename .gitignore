@@ -1,15 +1,32 @@
 venv/
 __pycache__/
 *.pyc
-
-datasets/raw/
-models/checkpoints/
-models/trained/
-
 .env
+candidates.db
+uploads/
+interview_audio/
+interview_images/
+interview_videos/
+interview_frames/
+*.mp4
+*.wav
+# Large datasets
+datasets/raw/resumes/*.csv
+datasets/raw/job_descriptions/*.csv
 
-.ipynb_checkpoints/
-
-node_modules/
-
-*.log
+# Generated files
+__pycache__/
+*.pyc
+frontend/__pycache__/
+interview_audio/
+interview_videos/
+interview_frames/
+interview_image/
+interview_images/
+*.mp4
+*.wav
+*.jpg
+*.jpeg
+*.png
+candidates.db
+.env
