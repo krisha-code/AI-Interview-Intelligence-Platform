@@ -1,32 +1,33 @@
+# Virtual environment
 venv/
-__pycache__/
-*.pyc
-.env
-candidates.db
-uploads/
-interview_audio/
-interview_images/
-interview_videos/
-interview_frames/
-*.mp4
-*.wav
-# Large datasets
-datasets/raw/resumes/*.csv
-datasets/raw/job_descriptions/*.csv
 
-# Generated files
+# Python cache
 __pycache__/
 *.pyc
 frontend/__pycache__/
+
+# Environment files
+.env
+
+# Local database
+candidates.db
+*.db
+
+# Uploaded/generated files
+uploads/
 interview_audio/
+interview_images/
+interview_image/
 interview_videos/
 interview_frames/
-interview_image/
-interview_images/
+
+# Media files
 *.mp4
 *.wav
 *.jpg
 *.jpeg
 *.png
-candidates.db
-.env
+
+# Large datasets
+datasets/raw/resumes/*.csv
+datasets/raw/job_descriptions/*.csv
