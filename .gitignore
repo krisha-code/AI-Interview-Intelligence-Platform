@@ -12,6 +12,7 @@ frontend/__pycache__/
 # Local database
 candidates.db
 *.db
+*.sqlite3
 
 # Uploaded/generated files
 uploads/
