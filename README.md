@@ -7,7 +7,26 @@ The system has two main sides:
 * **Recruiter Side**: Add job description, upload resumes, view candidate rankings, detailed reports, and final hiring decision.
 * **Candidate Side**: Upload resume, give interview, record/capture media, answer interview questions, and view AI-generated feedback.
 
+
+## Live Demo
+
+* **Frontend Demo:** Paste your Streamlit app link here
+* **Backend API:** https://kgandhi03-ai-interview-backend.hf.space
+* **API Documentation:** https://kgandhi03-ai-interview-backend.hf.space/docs
+
+## Deployment
+
+The project is deployed using a full-stack cloud architecture:
+
+* **Frontend:** Streamlit Cloud
+* **Backend:** Hugging Face Docker Spaces
+* **Database:** Aiven PostgreSQL
+* **AI/ML Services:** Whisper, DeepFace, Sentence Transformers, and FastAPI-based ML services
+
+This deployment allows users to access the Streamlit web interface publicly while the FastAPI backend handles resume analysis, interview transcription, emotion detection, answer quality evaluation, candidate ranking, and final hiring decision generation.
+
 ---
+
 
 ## Features
 
