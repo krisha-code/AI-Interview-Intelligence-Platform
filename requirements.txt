@@ -1,0 +1,6 @@
+streamlit
+requests
+pandas
+streamlit-webrtc
+av
+opencv-python-headless
