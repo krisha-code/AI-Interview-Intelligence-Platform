@@ -511,7 +511,7 @@ elif page == "Give Interview":
         with col1:
             audio_file = st.file_uploader(
                 "Upload Interview Audio",
-                type=["mp3", "wav", "m4a"]
+                type=["mp3", "wav", "m4a","mp4"]
             )
 
         with col2:
