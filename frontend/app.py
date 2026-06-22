@@ -16,8 +16,8 @@ from streamlit_webrtc import (
 # -----------------------------
 # Constants
 # -----------------------------
-API_URL = os.getenv("API_URL", "http://localhost:8000")
 
+API_URL = "https://kgandhi03-ai-interview-backend.hf.space"
 st.set_page_config(
     page_title="AI Interview Platform",
     page_icon="🤖",
