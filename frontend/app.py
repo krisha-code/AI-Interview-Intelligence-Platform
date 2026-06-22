@@ -16,7 +16,6 @@ from streamlit_webrtc import (
 # -----------------------------
 # Constants
 # -----------------------------
-
 API_URL = "https://kgandhi03-ai-interview-backend.hf.space"
 st.set_page_config(
     page_title="AI Interview Platform",
@@ -347,7 +346,7 @@ if page == "Recruiter Dashboard":
             """
             <div class='glass-card'>
                 No candidates found or backend is offline.
-                Make sure FastAPI is running on <code>http://localhost:8000</code>.
+               
             </div>
             """,
             unsafe_allow_html=True
