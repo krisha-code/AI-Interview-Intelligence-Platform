@@ -1579,7 +1579,7 @@ elif page == "Candidate Rankings":
                 )
 
             else:
-                st.info("No candidates found or backend is offline.")
+                st.info("No candidate activity yet. Add a job and submit a candidate resume to generate AI rankings and reports.")
 
 
 # -----------------------------
