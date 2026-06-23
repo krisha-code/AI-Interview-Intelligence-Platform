@@ -537,7 +537,7 @@ if page == "Recruiter Dashboard":
         st.markdown(
             """
             <div class='glass-card'>
-                No candidates found or backend is offline.
+                No candidate activity yet. Add a job and submit a candidate resume to generate AI rankings and reports.
             </div>
             """,
             unsafe_allow_html=True
