@@ -8,7 +8,8 @@ import json
 import pickle
 from backend.app.database.db import Base
 from backend.app.database.db import engine
-from backend.app.database.models import Candidate, Job, Match, InterviewAnalysis, AnswerQuality, VideoAnalysis, ImageAnalysis
+from backend.app.database.db import DB_BACKEND, DB_HOST
+from backend.app.database.models import Candidate, Job, Match, InterviewAnalysis, AnswerQuality, VideoAnalysis, ImageAnalysis, InterviewQuestion
 from backend.app.database.models import Match
 from backend.app.database.db import SessionLocal
 from backend.app.interview.answer_quality import evaluate_answer
@@ -33,41 +34,59 @@ from backend.app.services.resume_pipeline import analyze_resume as analyze_resum
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
 # Load data
-resume_df = pd.read_csv(
-    "datasets/raw/resumes/Resume.csv"
-)
+RESUME_DATASET_PATH = "datasets/raw/resumes/Resume.csv"
 
+if os.path.exists(RESUME_DATASET_PATH):
+    resume_df = pd.read_csv(RESUME_DATASET_PATH)
+else:
+    resume_df = pd.DataFrame()
 # Load embeddings
-resume_embeddings = np.load(
-    "models/resume_embeddings.npy"
-)
+EMBEDDINGS_PATH = "models/resume_embeddings.npy"
+
+if os.path.exists(EMBEDDINGS_PATH):
+    resume_embeddings = np.load(EMBEDDINGS_PATH)
+else:
+    resume_embeddings = None
 
 # Load model
 # Load model
 model = SentenceTransformer(
     "all-MiniLM-L6-v2"
 )
-with open(
-    "models/category_classifier.pkl",
-    "rb"
-) as f:
-    category_classifier = pickle.load(f)
+CATEGORY_CLASSIFIER_PATH = "models/category_classifier.pkl"
 
-with open(
-    "models/category_encoder.pkl",
-    "rb"
-) as f:
-    category_encoder = pickle.load(f)
+if os.path.exists(CATEGORY_CLASSIFIER_PATH):
+    with open(CATEGORY_CLASSIFIER_PATH, "rb") as f:
+        category_classifier = pickle.load(f)
+else:
+    category_classifier = None
+
+CATEGORY_ENCODER_PATH = "models/category_encoder.pkl"
+
+if os.path.exists(CATEGORY_ENCODER_PATH):
+    with open(CATEGORY_ENCODER_PATH, "rb") as f:
+        category_encoder = pickle.load(f)
+else:
+    category_encoder = None
+
 class JobRequest(BaseModel):
     job_text: str
+
+class JobCreateRequest(BaseModel):
+    job_title: str
+    job_description: str
+
+
+class QuestionCreateRequest(BaseModel):
+    question: str
 
 
 class ResumeAnalysisRequest(BaseModel):
     job_text: str
     resume_text: str
 
-print("Category Classifier Loaded")
-print("Category Encoder Loaded")
+print("Category Classifier Loaded:", category_classifier is not None)
+print("Category Encoder Loaded:", category_encoder is not None)
 
 class AnswerQualityRequest(BaseModel):
     candidate_id: int
@@ -80,6 +99,114 @@ class AnswerQualityRequest(BaseModel):
 def home():
     return {
         "message": "AI Interview Intelligence Platform Running"
+    }
+@app.get("/candidates")
+def get_candidates(
+    db: Session = Depends(get_db)
+):
+    candidates = db.query(Candidate).order_by(
+        Candidate.id.desc()
+    ).all()
+
+    return [
+        {
+            "candidate_id": candidate.id,
+            "filename": candidate.filename,
+            "skills": candidate.skills,
+            "final_score": candidate.final_score
+        }
+        for candidate in candidates
+    ]
+@app.post("/jobs")
+def create_job(
+    request: JobCreateRequest,
+    db: Session = Depends(get_db)
+):
+    job = Job(
+        job_title=request.job_title,
+        job_description=request.job_description
+    )
+
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    return {
+        "job_id": job.id,
+        "job_title": job.job_title,
+        "job_description": job.job_description
+    }
+
+
+@app.get("/jobs")
+def get_jobs(
+    db: Session = Depends(get_db)
+):
+    jobs = db.query(Job).order_by(Job.id.desc()).all()
+
+    return [
+        {
+            "job_id": job.id,
+            "job_title": job.job_title,
+            "job_description": job.job_description
+        }
+        for job in jobs
+    ]
+
+
+@app.post("/jobs/{job_id}/questions")
+def add_interview_question(
+    job_id: int,
+    request: QuestionCreateRequest,
+    db: Session = Depends(get_db)
+):
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+
+    question = InterviewQuestion(
+        job_id=job_id,
+        question=request.question
+    )
+
+    db.add(question)
+    db.commit()
+    db.refresh(question)
+
+    return {
+        "question_id": question.id,
+        "job_id": job_id,
+        "question": question.question
+    }
+
+
+@app.get("/jobs/{job_id}/questions")
+def get_interview_questions(
+    job_id: int,
+    db: Session = Depends(get_db)
+):
+    questions = db.query(InterviewQuestion).filter(
+        InterviewQuestion.job_id == job_id
+    ).order_by(InterviewQuestion.id.asc()).all()
+
+    return [
+        {
+            "question_id": q.id,
+            "job_id": q.job_id,
+            "question": q.question
+        }
+        for q in questions
+    ]
+
+@app.get("/db_status")
+def db_status():
+    return {
+        "database_backend": DB_BACKEND,
+        "database_host": DB_HOST
     }
 @app.post("/upload_resume_and_analyze")
 async def upload_resume_and_analyze(
@@ -224,7 +351,80 @@ async def upload_resume_and_analyze(
         "final_match_score":
         result["final_match_score"]
     }
+@app.post("/upload_resume_for_job")
+async def upload_resume_for_job(
+    resume: UploadFile = File(...),
+    job_id: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    job = db.query(Job).filter(Job.id == job_id).first()
 
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+
+    os.makedirs(
+        "uploads",
+        exist_ok=True
+    )
+
+    file_path = f"uploads/{resume.filename}"
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(await resume.read())
+
+    result = analyze_resume_pipeline(
+        file_path,
+        job.job_description
+    )
+
+    suggestions = generate_suggestions(
+        result["missing_skills"]
+    )
+
+    candidate = Candidate(
+        filename=resume.filename,
+        skills=", ".join(result["resume_skills"]),
+        matched_skills=", ".join(result["matched_skills"]),
+        missing_skills=", ".join(result["missing_skills"]),
+        semantic_score=float(result["semantic_match_score"]),
+        skill_match_percentage=float(result["skill_match_percentage"]),
+        final_score=float(result["final_match_score"])
+    )
+
+    db.add(candidate)
+    db.commit()
+    db.refresh(candidate)
+
+    match = Match(
+        candidate_id=candidate.id,
+        job_id=job.id,
+        semantic_score=float(result["semantic_match_score"]),
+        skill_match_percentage=float(result["skill_match_percentage"]),
+        final_score=float(result["final_match_score"])
+    )
+
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+
+    return {
+        "candidate_id": candidate.id,
+        "job_id": job.id,
+        "match_id": match.id,
+        "filename": resume.filename,
+        "job_title": job.job_title,
+        "resume_skills": result["resume_skills"],
+        "job_skills": result["job_skills"],
+        "matched_skills": result["matched_skills"],
+        "missing_skills": result["missing_skills"],
+        "suggestions": suggestions,
+        "skill_match_percentage": result["skill_match_percentage"],
+        "semantic_match_score": result["semantic_match_score"],
+        "final_match_score": result["final_match_score"]
+    }
 @app.post("/upload_resume")
 async def upload_resume(
     resume: UploadFile = File(...)
@@ -246,28 +446,20 @@ async def upload_resume(
     [resume_text]
 )
 
-    prediction_label = category_classifier.predict(
-    resume_embedding
-)
-
-# DEBUG
-    print("Prediction Label:")
-    print(prediction_label)
-
-    print("All Categories:")
-    print(category_encoder.classes_)
-
-    prediction_category = category_encoder.inverse_transform(
-    prediction_label
-)[0]
-
-    print("Final Category:")
-    print(prediction_category)
+    prediction_category = "Not available"
+    if category_classifier is not None and category_encoder is not None:
+        prediction_label = category_classifier.predict(resume_embedding)
+        prediction_category = category_encoder.inverse_transform(prediction_label)[0]
+        print("Final Category:")
+        print(prediction_category)
+    else:
+        print("Category model not available. Skipping category prediction.")
 
     return {
-    "filename": resume.filename,
-    "skills": resume_skills,
-}
+        "filename": resume.filename,
+        "skills": resume_skills,
+        "predicted_category": prediction_category,
+    }
 
 @app.post("/analyze_resume")
 def analyze_resume(request: ResumeAnalysisRequest):
@@ -355,6 +547,11 @@ def analyze_resume(request: ResumeAnalysisRequest):
 
 @app.post("/match")
 def match_resumes(request: JobRequest):
+    if resume_df.empty or resume_embeddings is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Bulk resume dataset is not available in deployed app. Use /upload_resume_and_analyze instead."
+        )
 
     # Extract skills from Job Description
     job_skills = extract_skills(
@@ -1204,12 +1401,16 @@ def candidate_report(
 
         "interview_delivery_analysis": {
             "available": interview is not None,
+            "transcript": interview.transcript if interview else None,
             "sentiment": interview.sentiment if interview else None,
+            "sentiment_score": interview.sentiment_score if interview else None,
             "filler_count": interview.filler_count if interview else None,
+            "filler_score": interview.filler_score if interview else None,
             "dominant_emotion": interview.dominant_emotion if interview else None,
+            "emotion_score": interview.emotion_score if interview else None,
             "confidence_score": interview.confidence_score if interview else None,
             "interview_score": interview_score
-        },
+      },
 
         "answer_quality_analysis": {
             "available": answer_quality is not None,

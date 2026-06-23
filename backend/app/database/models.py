@@ -187,3 +187,10 @@ class ImageAnalysis(Base):
     emotion_scores = Column(Text)
 
     confidence_score = Column(Float)
+
+class InterviewQuestion(Base):
+    __tablename__ = "interview_questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("jobs.id"))
+    question = Column(Text)
